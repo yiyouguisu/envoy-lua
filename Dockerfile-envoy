@@ -1,0 +1,14 @@
+FROM ubuntu:14.04
+
+
+
+ADD ./envoy /
+
+ADD ./envoy.yaml /etc/
+
+
+RUN chmod u+x /envoy
+
+RUN apt-get update && apt-get -y upgrade && apt-get install -y lua5.1 && apt-get install -y lua5.1-dev && apt-get install -y luarocks && luarocks install redis-lua && wget https://www.kyne.com.au/~mark/software/download/lua-cjson-2.1.0.zip && unzip lua-cjson-2.1.0.zip && cd lua-cjson-2.1.0 && luarocks make
+
+CMD /envoy --v2-config-only -l info -c /etc/envoy.yaml --service-node front-node --service-cluster front-cluster

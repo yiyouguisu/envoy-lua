@@ -1,0 +1,40 @@
+version: "3"
+services:
+
+  api_service: 
+    build:
+      context: ./
+      dockerfile: Dockerfile-service
+    environment:
+      - PORT=8888
+    expose:
+      - "80"
+    networks:
+      envoy-lua:
+
+  envoy:
+    build:
+      context: ./
+      dockerfile: Dockerfile-envoy
+    networks:
+      - envoy-lua
+    expose:
+      - "80"
+      - "8081"
+    privileged: true
+    ports:
+      - "80:80"
+      - "8081:8081"
+    depends_on:
+     - api_service
+
+  redis:
+    image: redis:latest
+    expose:
+      - 6379
+    networks:
+      - envoy-lua
+  
+
+networks:
+  envoy-lua:

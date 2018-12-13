@@ -1,0 +1,100 @@
+static_resources:
+  listeners:
+  - address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 80
+    filter_chains:
+    - filters:
+      - name: envoy.http_connection_manager
+        config:
+          generate_request_id: true
+          tracing:
+            operation_name: ingress
+          codec_type: auto
+          stat_prefix: ingress_http
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: serviceA
+              domains:
+              - "*"
+              routes:
+              - match:
+                  prefix: "/"
+                route:
+                  timeout: 35s
+                  cluster: serviceA-cluster 
+          http_filters:
+          - name: envoy.lua
+            config:
+              inline_code: |
+                package.cpath="/usr/local/lib/lua/5.1/?.so;/root/.luarocks/lib/lua/5.1/?.so;./?.so;/usr/local/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so;/usr/lib/lua/5.1/?.so;/usr/local/lib/lua/5.1/loadall.so;"..package.cpath
+                package.path="/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/root/.luarocks/share/lua/5.1/?.lua;/root/.luarocks/share/lua/5.1/?/init.lua;/usr/share/lua/5.1//?.lua;/usr/share/lua/5.1//?/init.lua;./?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/usr/local/lib/lua/5.1/?.lua;/usr/local/lib/lua/5.1/?/init.lua;/usr/share/lua/5.1/?.lua;/usr/share/lua/5.1/?/init.lua;"..package.path
+                local redis = require "redis"
+                local client = redis.connect('redis', 6379)
+
+                local serviceA_endpointA_counter = 0
+
+                function envoy_on_request(request_handle)
+                  local max_num = client:get('max_num')
+
+                  if max_num == nil then
+                    max_num = 10
+                  end
+
+                  request_handle:logInfo("aaaaaaaaaaaa")
+                  request_handle:logInfo(max_num)
+                  request_handle:logInfo(serviceA_endpointA_counter)
+
+                  if serviceA_endpointA_counter >= tonumber(max_num) then
+                    request_handle:respond(
+                      {
+                        [":status"] = "200",
+                        ["content-type"] = "application/json; charset=UTF-8"
+                      },
+                      "{\"code\": 0, \"msg\": \"ok\"}"
+                    )
+                  end
+                end
+                function envoy_on_response(response_handle)
+                  response_handle:logInfo("bbbbbbbbbbb")
+                  status = response_handle:headers():get(":status")
+                  buffer = response_handle:body()
+                  buffer:getBytes(0, buffer:length())
+                  data = tostring(buffer:getBytes(0, buffer:length()))
+                  response_handle:logInfo(data)
+                  local json = require 'cjson'
+                  jsondata = json.decode(data)
+                  if tonumber(status) > 200 or tonumber(jsondata['code']) > 0 then
+                      serviceA_endpointA_counter = serviceA_endpointA_counter + 1
+                  end
+                end
+          - name: envoy.router
+            config: {}
+  clusters:
+  - name: serviceA-cluster
+    connect_timeout: 100s
+    type: strict_dns
+    lb_policy: round_robin
+    load_assignment:
+      cluster_name: serviceA-cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: api_service
+                port_value: 80
+tracing:
+  http:
+    name: envoy.local
+    config:
+      collector_cluster: local
+      collector_endpoint: /var/log/trace_log.log
+admin:
+  access_log_path: "/var/log/envoy_log.log"
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 8081
