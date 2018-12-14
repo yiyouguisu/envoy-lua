@@ -10,14 +10,15 @@ services:
     expose:
       - "80"
     networks:
-      envoy-lua:
+      envoy-lua_network:
 
   envoy:
     build:
       context: ./
       dockerfile: Dockerfile-envoy
+    image: yiyouguisu/envoy-lua:latest
     networks:
-      - envoy-lua
+      - envoy-lua_network
     expose:
       - "80"
       - "8081"
@@ -33,8 +34,8 @@ services:
     expose:
       - 6379
     networks:
-      - envoy-lua
+      - envoy-lua_network
   
 
 networks:
-  envoy-lua:
+  envoy-lua_network:
