@@ -1,14 +1,42 @@
-FROM ubuntu:14.04
+FROM frolvlad/alpine-glibc
 
+ENV LUA_VERSION 5.1.5
+ENV LUAROCKS_VERSION 2.4.2
+
+WORKDIR /
+RUN apk upgrade && \
+    apk add make tar unzip gcc readline-dev curl libc-dev ncurses-dev && \
+    curl -L http://www.lua.org/ftp/lua-${LUA_VERSION}.tar.gz | tar xzf - && \
+    curl -OL https://luarocks.org/releases/luarocks-${LUAROCKS_VERSION}.tar.gz && \
+    tar xzf /luarocks-${LUAROCKS_VERSION}.tar.gz
+    
+
+WORKDIR /lua-$LUA_VERSION
+
+RUN make linux test
+RUN make install
+RUN rm -rf /lua-$LUA_VERSION
+
+WORKDIR /luarocks-$LUAROCKS_VERSION
+
+RUN ./configure \
+  --with-lua=/usr/local/ \
+  --with-lua-include=/usr/local/include \
+  --with-lua-lib=/usr/local/lib/lua
+
+RUN make build
+RUN make install
+RUN rm -rf /luarocks-$LUAROCKS_VERSION
+
+RUN luarocks install luasocket && wget https://www.kyne.com.au/~mark/software/download/lua-cjson-2.1.0.zip && unzip lua-cjson-2.1.0.zip && cd lua-cjson-2.1.0 && luarocks make
 
 
 ADD ./envoy /
 
+RUN chmod 777 /envoy 
+
 ADD ./envoy.yaml /etc/
 
+ADD ./redis.lua /usr/local/share/lua/5.1/
 
-RUN chmod u+x /envoy
-
-RUN apt-get update && apt-get -y upgrade && apt-get install -y lua5.1 && apt-get install -y lua5.1-dev && apt-get install -y luarocks && luarocks install redis-lua && wget https://www.kyne.com.au/~mark/software/download/lua-cjson-2.1.0.zip && unzip lua-cjson-2.1.0.zip && cd lua-cjson-2.1.0 && luarocks make
-
-CMD /envoy --v2-config-only -l info -c /etc/envoy.yaml --service-node front-node --service-cluster front-cluster
+CMD /envoy -l info -c /etc/envoy.yaml --service-node front-node --service-cluster front-cluster

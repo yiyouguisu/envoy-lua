@@ -10,7 +10,7 @@ services:
     expose:
       - "80"
     networks:
-      envoy-lua_network:
+      envoy_lua_network:
 
   envoy:
     build:
@@ -18,14 +18,14 @@ services:
       dockerfile: Dockerfile-envoy
     image: yiyouguisu/envoy-lua:latest
     networks:
-      - envoy-lua_network
+      - envoy_lua_network
     expose:
       - "80"
-      - "8081"
+      - "9901"
     privileged: true
     ports:
-      - "80:80"
-      - "8081:8081"
+      - "8081:80"
+      - "9901:9901"
     depends_on:
      - api_service
 
@@ -34,8 +34,8 @@ services:
     expose:
       - 6379
     networks:
-      - envoy-lua_network
+      - envoy_lua_network
   
 
 networks:
-  envoy-lua_network:
+  envoy_lua_network:

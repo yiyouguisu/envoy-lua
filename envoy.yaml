@@ -29,10 +29,12 @@ static_resources:
           - name: envoy.lua
             config:
               inline_code: |
-                package.cpath="/usr/local/lib/lua/5.1/?.so;/root/.luarocks/lib/lua/5.1/?.so;./?.so;/usr/local/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so;/usr/lib/lua/5.1/?.so;/usr/local/lib/lua/5.1/loadall.so;"..package.cpath
-                package.path="/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/root/.luarocks/share/lua/5.1/?.lua;/root/.luarocks/share/lua/5.1/?/init.lua;/usr/share/lua/5.1//?.lua;/usr/share/lua/5.1//?/init.lua;./?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/usr/local/lib/lua/5.1/?.lua;/usr/local/lib/lua/5.1/?/init.lua;/usr/share/lua/5.1/?.lua;/usr/share/lua/5.1/?/init.lua;"..package.path
+                package.cpath="/usr/local/lib/lua/5.1/?.so;/usr/lib/lua/5.1/?.so;"..package.cpath
+                package.path="/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/5.1/?.lua;"..package.path
                 local redis = require "redis"
                 local client = redis.connect('redis', 6379)
+                response = client:ping() 
+                print("Redis Server connect Result:"..tostring(response))
 
                 local serviceA_endpointA_counter = 0
 
@@ -86,15 +88,9 @@ static_resources:
               socket_address:
                 address: api_service
                 port_value: 80
-tracing:
-  http:
-    name: envoy.local
-    config:
-      collector_cluster: local
-      collector_endpoint: /var/log/trace_log.log
 admin:
-  access_log_path: "/var/log/envoy_log.log"
+  access_log_path: "/dev/null"
   address:
     socket_address:
       address: 0.0.0.0
-      port_value: 8081
+      port_value: 9901
