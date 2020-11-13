@@ -1,0 +1,35 @@
+version: "3"
+services:
+
+  api_service: 
+    build:
+      context: ./
+      dockerfile: Dockerfile-service
+    environment:
+      - PORT=8888
+    expose:
+      - "80"
+    networks:
+      envoy_lua_network:
+
+  envoy:
+    build:
+      context: ./
+      dockerfile: Dockerfile-envoy
+    environment:
+      - Micro-Service-Component-Group=default
+    networks:
+      - envoy_lua_network
+    expose:
+      - "80"
+      - "9901"
+    privileged: true
+    ports:
+      - "8081:80"
+      - "9901:9901"
+    depends_on:
+     - api_service
+
+
+networks:
+  envoy_lua_network:
